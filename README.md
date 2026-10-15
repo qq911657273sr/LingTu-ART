@@ -29,9 +29,13 @@
 
 ## 界面预览
 
-| AI 图像编辑 | 本地素材库 |
-| --- | --- |
-| <img src="docs/screenshots/ai-image-editing.png" alt="灵图 ART AI 图像编辑界面，展示参考图、编辑结果和生成记录" width="100%"> | <img src="docs/screenshots/asset-library.png" alt="灵图 ART 素材库界面，展示素材网格、分类和详情面板" width="100%"> |
+### AI 图像编辑
+
+<p align="center"><img src="docs/screenshots/ai-image-editing.png" alt="灵图 ART AI 图像编辑界面，展示参考图、编辑结果和生成记录" width="100%"></p>
+
+### 本地素材库
+
+<p align="center"><img src="docs/screenshots/asset-library.png" alt="灵图 ART 素材库界面，展示素材网格、分类和详情面板" width="100%"></p>
 
 ## 功能特点
 
@@ -102,4 +106,5 @@ Set-ExecutionPolicy -Scope Process Bypass
 **LingTu ART** — a local-first art asset library and AI image editing workspace for Windows.
 
 </div>
+
 
