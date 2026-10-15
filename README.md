@@ -1,8 +1,10 @@
 # 灵图 ART · LingTu ART
 
-**A local-first asset library for AI artists.** Organize, preview, search, and reuse images and videos on Windows, with optional AI image editing through providers you configure.
-
 灵图 ART 是面向个人创作者的本地美术素材库。素材、数据库和服务配置默认保存在本机；应用只在本机回环地址提供界面。使用 AI 修图时，参考图和提示词会发送到你选择并配置的服务商。
+
+**灵图 ART 是一款面向 AI 创作者的本地美术素材库。** 可在 Windows 上整理、预览、搜索和复用图片与视频，也可按需接入 AI 图像编辑服务。
+
+**LingTu ART is a local-first asset library for AI artists.** Organize, preview, search, and reuse images and videos on Windows, with optional AI image editing through providers you configure.
 
 ## Features
 
@@ -79,3 +81,4 @@ packaging/              Windows installer, icon, build script, and docs
 ## License
 
 LingTu ART is distributed under the MIT License. Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+

@@ -250,6 +250,7 @@ try:
     check(http('DELETE', '/api/ai/jobs/' + job['id'])[0] == 200, 'completed job can be deleted')
     check(http('GET', '/api/ai/jobs/' + job['id'])[0] == 404 and http('GET', '/file/' + saved['asset_id'])[0] == 200, 'deleting a saved job preserves its library asset')
     print(f'PASS {len(checks)} checks. Work: {WORK}', flush=True)
+    (ROOT / 'output').mkdir(parents=True, exist_ok=True)
     (ROOT / 'output/ai-test-latest.json').write_text(json.dumps({'base': BASE, 'work': str(WORK), 'mock': MOCK, 'checks': checks, 'asset_id': aid, 'job_id': job['id']}, ensure_ascii=False, indent=2), 'utf-8')
     if '--serve' in sys.argv:
         print('UI test server: ' + BASE, flush=True)
@@ -257,3 +258,4 @@ try:
             time.sleep(1)
 finally:
     stop(); mock.shutdown()
+
