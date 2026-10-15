@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#252a32"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </linearGradient>
+    <linearGradient id="lime" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e2ff36"/>
+      <stop offset="1" stop-color="#adf000"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+  </defs>
+  <rect x="16" y="16" width="992" height="992" rx="246" fill="#000" opacity=".18" filter="url(#shadow)"/>
+  <rect x="32" y="32" width="960" height="960" rx="238" fill="url(#bg)"/>
+  <rect x="33" y="33" width="958" height="958" rx="237" fill="none" stroke="#ffffff" stroke-opacity=".09" stroke-width="3"/>
+  <rect x="178" y="178" width="668" height="668" rx="194" fill="#080a0d" stroke="#ffffff" stroke-opacity=".07" stroke-width="4"/>
+  <g fill="url(#lime)">
+    <rect x="268" y="268" width="210" height="210" rx="72"/>
+    <rect x="546" y="268" width="210" height="210" rx="72"/>
+    <rect x="268" y="546" width="210" height="210" rx="72"/>
+    <rect x="546" y="546" width="210" height="210" rx="72"/>
+  </g>
+  <path d="M751 203l15 39 39 15-39 15-15 39-15-39-39-15 39-15z" fill="#f2ff9d" opacity=".96"/>
+</svg>

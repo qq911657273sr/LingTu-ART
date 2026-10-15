@@ -79,4 +79,3 @@ packaging/              Windows installer, icon, build script, and docs
 ## License
 
 LingTu ART is distributed under the MIT License. Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-

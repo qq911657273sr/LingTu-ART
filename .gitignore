@@ -1,0 +1,45 @@
+# Local configuration, libraries, and credentials
+config.json
+.env
+.env.*
+!.env.example
+data/
+backups/
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyd
+*.egg-info/
+/dist/
+build/
+
+# JavaScript
+web/node_modules/
+!/web/dist/
+!/web/dist/**
+
+# Local output, test artifacts, and installers
+output/
+/*.exe
+*.log
+tests/samples/
+tests/last_acceptance.log
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local planning and obsolete packaging files
+/findings.md
+/progress.md
+/task_plan.md
+/art-library.spec
