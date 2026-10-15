@@ -1,32 +1,66 @@
-# 灵图 ART · LingTu ART
+<div align="center">
 
-灵图 ART 是面向个人创作者的本地美术素材库。素材、数据库和服务配置默认保存在本机；应用只在本机回环地址提供界面。使用 AI 修图时，参考图和提示词会发送到你选择并配置的服务商。
+<img src="web/public/lingtu-art.png" alt="灵图 ART 图标" width="96">
 
-**灵图 ART 是一款面向 AI 创作者的本地美术素材库。** 可在 Windows 上整理、预览、搜索和复用图片与视频，也可按需接入 AI 图像编辑服务。
+# 灵图 ART
 
-**LingTu ART is a local-first asset library for AI artists.** Organize, preview, search, and reuse images and videos on Windows, with optional AI image editing through providers you configure.
+### 为 AI 创作者打造的本地美术素材库与图像编辑工作台
 
-## Features
+整理、检索、预览和复用你的图片与视频，也可以从素材库直接发起 AI 图像编辑。
 
-- Import and organize images and videos with folders, tags, favorites, notes, and fast search.
-- Preview, compare, zoom, and navigate assets; inspect image dimensions and generation metadata.
-- Read metadata from common ComfyUI, A1111/Forge, XMP, and video workflows.
-- Use the optional AI image editor with OpenAI-compatible, Gemini, and RunningHub providers.
-- Keep originals untouched; save generated results to the library only when you choose.
-- Back up and restore the library to a separate folder.
-- Run as a browser-based local app or as a standalone Windows desktop app.
+[![Latest release](https://img.shields.io/github/v/release/qq911657273sr/LingTu-ART?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC)](https://github.com/qq911657273sr/LingTu-ART/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-4c8bf5)](https://github.com/qq911657273sr/LingTu-ART/releases/latest)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/github/license/qq911657273sr/LingTu-ART)](LICENSE)
 
-## Quick start (Windows)
+[下载 Windows 版](https://github.com/qq911657273sr/LingTu-ART/releases/latest) · [功能与隐私](#ai-图像编辑与隐私) · [从源码运行](#从源码运行)
 
-1. Download the latest installer from the [GitHub Releases](https://github.com/qq911657273sr/LingTu-ART/releases) page.
-2. Run `LingTu-ART-Setup-*.exe` and launch **灵图 ART** from the desktop or Start menu.
-3. Import images or videos into the library. Configure AI providers in **Settings → AI image editing** if needed.
+</div>
 
-The desktop installer bundles the app runtime and FFmpeg. WebView2 is installed by the setup program if it is missing.
+---
 
-## Run from source
+## 项目简介
 
-Requirements: Windows 10/11 x64, Python 3.12, FFmpeg/ffprobe, and Node.js 22 (only needed to rebuild the frontend).
+灵图 ART 是一款运行在 Windows 本机的美术素材管理工具。它把素材整理、生成信息查看和 AI 图像编辑放在同一个工作台里，适合插画、游戏美术、概念设计和其他 AI 创作流程。
+
+素材库支持管理图片与视频、分类文件夹、标签、收藏、备注和组合搜索；查看图片时可以放大、适应窗口并浏览完整画面。需要修改素材时，可以从库中选择一张或多张参考图，描述想要的改动，再把结果与原图对照、继续编辑，或保存为新的素材。
+
+应用默认在本机运行，素材和数据库保存在你选择的本地目录。AI 编辑和提示词助手均为可选功能，需要时再配置自己的服务。
+
+## 界面预览
+
+| AI 图像编辑 | 本地素材库 |
+| --- | --- |
+| <img src="docs/screenshots/ai-image-editing.png" alt="灵图 ART AI 图像编辑界面，展示参考图、编辑结果和生成记录" width="100%"> | <img src="docs/screenshots/asset-library.png" alt="灵图 ART 素材库界面，展示素材网格、分类和详情面板" width="100%"> |
+
+## 功能特点
+
+- **本地素材管理**：导入图片和视频，使用分类、子文件夹、标签、收藏与备注整理素材。
+- **快速查找与预览**：组合搜索素材名称、标签和生成信息；支持网格浏览、全图预览、缩放和前后切换。
+- **生成信息识别**：读取常见 ComfyUI、A1111/Forge、XMP 和视频工作流元数据。
+- **AI 图像编辑**：从素材库或本地添加参考图，按顺序组织多张参考图，描述局部修改、换背景、调整风格或姿势等需求。
+- **提示词助手与预设**：可选接入 LLM，把自然语言修改需求整理成适合所选生图服务的提示词；支持导入和管理自定义提示词预设。
+- **生成记录与对照**：查看任务记录、对比原图和结果、继续编辑；按需下载结果或另存到素材库，源素材不会被覆盖。
+- **备份与恢复**：将素材和库数据备份到独立目录，并在需要时恢复。
+- **Windows 桌面版**：提供安装程序，也可以从源码启动本地 Web 界面。
+
+## 下载与安装
+
+前往 **[GitHub Releases 下载最新 Windows 安装包](https://github.com/qq911657273sr/LingTu-ART/releases/latest)**，运行 `LingTu-ART-Setup-*.exe`，然后从桌面或开始菜单启动灵图 ART。
+
+安装程序包含应用运行环境和 FFmpeg；如果系统缺少 WebView2，安装程序会提示安装。首次启动后，选择素材库目录并导入图片或视频即可使用基础素材管理功能。
+
+## AI 图像编辑与隐私
+
+AI 图像编辑不是使用素材库的前提。你可以在应用设置中自行配置 OpenAI 兼容接口、Gemini 或 RunningHub 服务，以及相应的模型、工作流和 API Key。提示词助手可单独配置兼容 OpenAI 的 LLM 接口。
+
+项目源码和公开发行包不包含个人 API Key，也不预置个人的生图或 LLM 服务地址。Windows 上保存的服务凭据由 DPAPI 加密。提交生成任务时，所选参考图和提示词会发送给你配置的服务提供方，并受其服务条款与隐私政策约束；未配置服务时，AI 功能不可用。
+
+更多配置步骤见[AI 图生图使用说明](packaging/AI图生图使用说明.md)。
+
+## 从源码运行
+
+需要 Windows 10/11 x64、Python 3.12 和 FFmpeg/ffprobe。Node.js 22 仅在修改或重新构建前端时需要。
 
 ```powershell
 git clone https://github.com/qq911657273sr/LingTu-ART.git
@@ -35,50 +69,37 @@ cd LingTu-ART
 .\启动素材库.bat
 ```
 
-The first-run script creates `.venv`, installs Python dependencies, and checks for FFmpeg. The checked-in `web/dist` lets you run without Node.js; to change the UI, run `cd web`, `npm ci`, and `npm run build` first.
+首次安装脚本会创建 Python 虚拟环境并安装依赖。浏览器界面默认运行在 `http://127.0.0.1:8765`；关闭启动窗口即可停止本地服务。前端源码位于 `web/src/`，修改后在 `web/` 目录运行 `npm ci` 和 `npm run build`。
 
-The browser interface opens at `http://127.0.0.1:8765`. Close the console window to stop the local service. Local settings are created on first launch; never commit your `config.json` or `data/` directory.
+## 从源码构建 Windows 安装包
 
-## Build the Windows desktop installer
-
-Install Python 3.12, Node.js 22, FFmpeg, and [Inno Setup 6](https://jrsoftware.org/isinfo.php). Then run PowerShell from the repository root:
+安装 Python 3.12、Node.js 22、FFmpeg 和 [Inno Setup 6](https://jrsoftware.org/isinfo.php)，然后在仓库根目录运行：
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
 .\packaging\build-windows.ps1
 ```
 
-The script builds the frontend and PyInstaller app, then creates an installer in `output/installer/`. The build uses the FFmpeg executable found on your machine; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party licenses.
+安装包会生成在 `output/installer/`。第三方组件许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-## AI image editing and privacy
+## 验收测试
 
-AI editing is optional. Add your provider endpoint, model/workflow, and API key in the app settings. Credentials are protected with Windows DPAPI. On generation, selected reference images and prompts are sent to the provider you configured, subject to that provider's terms and privacy policy. This project does not include API credentials or provide AI service access.
-
-See [AI image editing guide (Chinese)](packaging/AI图生图使用说明.md) for setup details.
-
-## Tests
-
-On Windows, with Python dependencies installed:
+在 Windows 且已安装项目依赖的环境中运行：
 
 ```powershell
 .\.venv\Scripts\python.exe tests\acceptance.py
 .\.venv\Scripts\python.exe tests\ai_acceptance.py
 ```
 
-The acceptance suites use temporary data and local mock providers; they do not call paid AI services or modify your library.
+验收使用临时素材目录和本地模拟服务，不会调用付费 AI 服务，也不会修改现有素材库。
 
-## Project structure
+## 许可证
 
-```text
-artlib/                 Python/FastAPI backend
-artlib/vendor/feral/    FML metadata parsing code (see its MIT license)
-web/src/                React frontend source
-web/dist/               Frontend assets used by the Python app
-tests/                  Local acceptance tests
-packaging/              Windows installer, icon, build script, and docs
-```
+灵图 ART 使用 MIT 许可证。第三方组件保留各自许可证，详情见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-## License
+<div align="center">
 
-LingTu ART is distributed under the MIT License. Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+**LingTu ART** — a local-first art asset library and AI image editing workspace for Windows.
+
+</div>
 
