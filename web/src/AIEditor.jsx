@@ -72,6 +72,7 @@ export function AIEditor({ open, source, onClose, onSaved }) {
       const list = []
       for (const file of files) {
         const response = await fetch('/api/ai/references', { method: 'POST', body: file })
+        if (response.status === 401) window.dispatchEvent(new Event('lingtu-auth-required'))
         const d = await response.json()
         if (!response.ok) throw new Error(d.detail || '上传失败')
         list.push({ ...d, name: file.name })

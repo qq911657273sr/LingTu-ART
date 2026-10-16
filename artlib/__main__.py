@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import socket
+import os
 import sys
 import threading
 import urllib.request
@@ -32,10 +33,15 @@ def main() -> None:
         raise SystemExit(f"缺少依赖 {e.name}。请先双击运行 “安装.bat”。")
 
     from . import config as cfgmod
+    from . import web_auth
     cfg = cfgmod.load()
     host, port = cfg["host"], int(cfg["port"])
+    if web_auth.ENABLED:
+        web_auth.validate_config()
+        host = "127.0.0.1"
+        port = int(os.environ.get("ARTLIB_PORT", port))
     url = f"http://{'127.0.0.1' if host in ('0.0.0.0', '127.0.0.1') else host}:{port}/"
-    no_browser = "--no-browser" in sys.argv or not cfg.get("open_browser", True)
+    no_browser = web_auth.ENABLED or "--no-browser" in sys.argv or not cfg.get("open_browser", True)
 
     if _port_busy("127.0.0.1", port):
         if _is_us(url):

@@ -49,6 +49,7 @@ try:
     else:
         raise RuntimeError("Frozen service did not become ready")
     check((WORK / "数据" / "library.db").is_file(), "database persists outside one-file extraction directory")
+    check(request('GET', '/api/update')['current_version'] == '1.4.1', 'bundled shared version and update endpoint available')
     ai_settings = request("GET", "/api/ai/settings")
     check(ai_settings.get("prompt_presets") == [], "LLM prompt presets have a separate settings collection")
     saved_presets = request("POST", "/api/ai/prompt-presets", {"presets": [{"name": "测试规则", "text": "把用户的自然语言整理成图生图提示词，只返回结果。"}]})

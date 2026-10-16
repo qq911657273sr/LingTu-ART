@@ -1,0 +1,27 @@
+[Unit]
+Description=LingTu ART authenticated web application
+After=network.target
+
+[Service]
+Type=simple
+User=lingtu-art
+Group=lingtu-art
+WorkingDirectory=/opt/lingtu-art
+EnvironmentFile=/etc/lingtu-art/lingtu.env
+ExecStart=/opt/lingtu-art/.venv/bin/python -m artlib --no-browser
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/lingtu-art
+
+[Install]
+WantedBy=multi-user.target

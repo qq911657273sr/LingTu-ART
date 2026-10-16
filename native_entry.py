@@ -1,4 +1,11 @@
 """Installed LingTu ART application: native WebView2 window + local service."""
+import sys
+
+if '--mcp' in sys.argv:
+    from artlib.mcp_server import main
+    main()
+    raise SystemExit(0)
+
 import ctypes
 import json
 import logging
@@ -95,7 +102,14 @@ def desktop(user_dir):
                     if result.get("brand") and result.get("logo") and result.get("search"):
                         break
                     time.sleep(.1)
-                report.write_text(json.dumps({"ok": bool(result.get("brand") and result.get("logo") and result.get("search")), "page": result, "renderer": "edgechromium", "url": url, "tools": media.ffmpeg_status()}, ensure_ascii=False, indent=2), "utf-8")
+                window.evaluate_js("document.querySelector('.agent-entry')?.click()")
+                agent = {}
+                for _ in range(60):
+                    agent = window.evaluate_js("({panel:!!document.querySelector('.agent-panel'),composer:!!document.querySelector('.agent-composer'),entry:!!document.querySelector('.agent-entry'),width:innerWidth,scrollWidth:document.documentElement.scrollWidth})")
+                    if agent.get('panel') and agent.get('composer'):
+                        break
+                    time.sleep(.1)
+                report.write_text(json.dumps({"ok": bool(result.get("brand") and result.get("logo") and result.get("search") and agent.get('panel') and agent.get('composer')), "page": result, "agent": agent, "renderer": "edgechromium", "url": url, "tools": media.ffmpeg_status()}, ensure_ascii=False, indent=2), "utf-8")
             except Exception as error:
                 report.write_text(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False), "utf-8")
             finally:

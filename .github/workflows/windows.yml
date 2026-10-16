@@ -1,4 +1,4 @@
-name: Windows build and tests
+name: Windows build and release
 
 on:
   push:
@@ -7,11 +7,21 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   windows:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
     env:
-      PYTHONUTF8: "1"
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,6 +32,29 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Read shared version and check existing release
+        id: version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = python -c "import configparser; c=configparser.ConfigParser(); c.read('version.ini'); print(c['app']['version'])"
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version.ini' }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          if ('${{ github.ref_type }}' -eq 'tag' -and '${{ github.ref_name }}' -ne "v$version") { throw 'Git tag does not match version.ini' }
+          $publish = 'false'
+          if ('${{ github.event_name }}' -ne 'pull_request') {
+            $release = gh api "repos/$env:GITHUB_REPOSITORY/releases/tags/v$version" --jq '.draft' 2>&1
+            if ($LASTEXITCODE -eq 0) {
+              if ("$release".Trim() -eq 'true') { $publish = 'true' }
+            } elseif ("$release" -match 'HTTP 404') {
+              $publish = 'true'
+            } else {
+              throw 'Unable to check GitHub release status'
+            }
+          }
+          "publish=$publish" >> $env:GITHUB_OUTPUT
+          exit 0
       - name: Install FFmpeg and Inno Setup
         shell: pwsh
         run: choco install ffmpeg innosetup -y --no-progress
@@ -34,37 +67,52 @@ jobs:
         run: python -m pip install -r requirements-desktop.txt
       - name: Run acceptance suites
         run: |
+          python -m unittest discover -s tests -p "test_*.py"
           python tests/acceptance.py
           python tests/ai_acceptance.py
+          python tests/agent_http_acceptance.py
+          python tests/web_auth_acceptance.py
       - name: Build Windows installer
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        if: steps.version.outputs.publish == 'true'
         run: .\packaging\build-windows.ps1
+      - name: Verify frozen Agent and MCP
+        if: steps.version.outputs.publish == 'true'
+        run: |
+          .venv\Scripts\python.exe tests/agent_http_acceptance.py build/ARTSPACE/ARTSPACE.exe
+          .venv\Scripts\python.exe tests/exe_smoke.py build/ARTSPACE/ARTSPACE.exe
+      - name: Generate installer checksum
+        if: steps.version.outputs.publish == 'true'
+        shell: pwsh
+        run: |
+          $installer = Get-Item "output/installer/LingTu-ART-Setup-${{ steps.version.outputs.version }}.exe"
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($installer.Name)" | Set-Content output/installer/SHA256SUMS.txt -Encoding ascii
       - name: Upload installer artifact
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        if: steps.version.outputs.publish == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: LingTu-ART-Windows
-          path: output/installer/*.exe
+          path: |
+            output/installer/LingTu-ART-Setup-${{ steps.version.outputs.version }}.exe
+            output/installer/SHA256SUMS.txt
           if-no-files-found: error
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: needs.windows.outputs.publish == 'true' && github.event_name != 'pull_request'
     needs: windows
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: LingTu-ART-Windows
           path: release
       - uses: softprops/action-gh-release@v2
         with:
-          name: 灵图 ART ${{ github.ref_name }}
-          body: |
-            灵图 ART 是面向 AI 创作者的本地美术素材库，支持图片与视频管理、分类标签、收藏、搜索、全图预览和可选 AI 修图。
-
-            Windows 安装包：下载下方 `LingTu-ART-Setup-1.3.11.exe` 并运行安装。首次启动后可在设置中配置兼容 OpenAI 的模型接口、Gemini 或 RunningHub；AI 服务按需启用。
-
-            素材默认保存在本机。详细功能、安装步骤和许可说明请查看仓库 README。
-          files: release/*.exe
-
+          tag_name: v${{ needs.windows.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: 灵图 ART v${{ needs.windows.outputs.version }}
+          body_path: docs/RELEASE_NOTES.md
+          make_latest: true
+          files: release/*

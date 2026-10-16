@@ -37,9 +37,14 @@ if (-not $iscc) {
     $defaultIscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
     if (Test-Path $defaultIscc) { $iscc = Get-Item $defaultIscc }
 }
+if (-not $iscc) {
+    $userIscc = Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'
+    if (Test-Path $userIscc) { $iscc = Get-Item $userIscc }
+}
 if (-not $iscc) { throw 'Inno Setup 6 was not found. Install it and retry.' }
 
-& $iscc.Source (Join-Path $root 'packaging\installer.iss')
+$compilerPath = if ($iscc.Source) { $iscc.Source } else { $iscc.FullName }
+& $compilerPath (Join-Path $root 'packaging\installer.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Creating the Windows installer failed.' }
 
 Write-Host "Installer created in $(Join-Path $root 'output\installer')."

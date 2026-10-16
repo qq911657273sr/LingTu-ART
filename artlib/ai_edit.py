@@ -67,9 +67,17 @@ def root():
 
 
 def protect(value, decrypt=False):
-    """Windows DPAPI, tied to current Windows user. Never fall back to plaintext."""
+    """Encrypt credentials with Windows DPAPI or the deployment Fernet key."""
     if os.name != 'nt':
-        raise ValueError('密钥保护需要 Windows DPAPI')
+        encryption_key = os.environ.get('ARTLIB_ENCRYPTION_KEY', '')
+        if not encryption_key:
+            raise ValueError('服务器尚未配置 ARTLIB_ENCRYPTION_KEY')
+        from cryptography.fernet import Fernet, InvalidToken
+        try:
+            fernet = Fernet(encryption_key.encode())
+            return fernet.decrypt(value.encode()).decode() if decrypt else fernet.encrypt(value.encode()).decode()
+        except (InvalidToken, ValueError) as e:
+            raise ValueError('无法读取或保存密钥，请检查服务器加密配置') from e
     class Blob(ctypes.Structure):
         _fields_ = [('size', ctypes.c_ulong), ('data', ctypes.POINTER(ctypes.c_ubyte))]
     raw = base64.b64decode(value) if decrypt else value.encode()
@@ -432,6 +440,10 @@ def source_bytes(path, ref):
 
 @router.post('/jobs')
 def submit(data: dict = Body(...)):
+    return submit_job(data)
+
+
+def submit_job(data: dict):
     with LOCK:
         path = root()
         ident = uid(data.get('request_id'))
@@ -471,6 +483,8 @@ def submit(data: dict = Body(...)):
 def run_job(path, job, profile, key, images):
     def update(**fields):
         with LOCK:
+            if 'download_value' in fields:
+                write_json(path / 'jobs' / job['id'] / 'provider-result.json', {'value': fields.pop('download_value')})
             job.update(fields)
             write_json(path / 'jobs' / job['id'] / 'job.json', job)
     try:
@@ -487,8 +501,53 @@ def run_job(path, job, profile, key, images):
             ACTIVE.discard(job['id'])
 
 
+def resume_job(ident):
+    """Only resume polling an existing RunningHub task, never resubmit it."""
+    with LOCK:
+        path = root()
+        job = read_job(path, ident)
+        if ident in ACTIVE:
+            return job.copy()
+        if len(ACTIVE) >= 2:
+            raise ValueError('已有 2 个任务正在生成，请稍后恢复')
+        profile = next((p for p in settings()['profiles'] if p['id'] == job['profile_id']), None)
+        download = path / 'jobs' / ident / 'provider-result.json'
+        if not download.exists() and (not profile or job['kind'] != 'runninghub' or not job.get('remote_id')):
+            raise ValueError('任务不支持自动恢复查询')
+        key = protect(profile['secret'], decrypt=True) if profile else ''
+        job.update(status='running', error='', stage='查询平台原任务')
+        write_json(path / 'jobs' / ident / 'job.json', job)
+        ACTIVE.add(ident)
+        def poll():
+            def update(**fields):
+                with LOCK:
+                    if 'download_value' in fields:
+                        write_json(download, {'value': fields.pop('download_value')})
+                    job.update(fields)
+                    write_json(path / 'jobs' / ident / 'job.json', job)
+            try:
+                if download.exists():
+                    raw = ai_providers.read_image(load_json(download, {})['value'])
+                else:
+                    raw = ai_providers.runninghub_result(profile, key, job['remote_id'], update)
+                with LOCK:
+                    (path / 'jobs' / ident / 'result.png').write_bytes(png_bytes(raw))
+                    update(status='completed', stage='生成完成', finished=time.time())
+            except Exception as exc:
+                update(status='failed', error=ai_providers.error_message(exc, key), stage='查询未完成')
+            finally:
+                with LOCK:
+                    ACTIVE.discard(ident)
+        threading.Thread(target=poll, daemon=True, name='AI-recover-' + ident[:8]).start()
+        return job.copy()
+
+
 @router.post('/jobs/{ident}/save')
 def save_result(ident: str):
+    return import_result(ident)
+
+
+def import_result(ident: str, folder_id=None):
     with LOCK:
         path = root()
         job = read_job(path, ident)
@@ -505,7 +564,7 @@ def save_result(ident: str):
         shutil.copyfile(result, tmp)
         digest = hashlib.sha256(tmp.read_bytes()).hexdigest()
         source_name = job['references'][0]['name'] if job['references'] else job['provider']
-        imported = library.import_file(tmp, digest, f'AI-{source_name[:50]}-{ident[:6]}.png', None, None)
+        imported = library.import_file(tmp, digest, f'AI-{source_name[:50]}-{ident[:6]}.png', folder_id, None)
         aid = imported.get('asset_id')
         if not aid:
             raise ValueError(imported.get('message', '入库失败'))

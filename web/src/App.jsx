@@ -12,6 +12,7 @@ import { Viewer } from './Viewer'
 import { Inspector } from './Inspector'
 import { Settings, Offline } from './Settings'
 import { AIEditor } from './AIEditor'
+import { AgentPanel, AgentResults } from './agent/AgentPanel'
 
 const PAGE = 120
 const LS = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } }
@@ -43,6 +44,9 @@ function Workbench() {
   const [focus, setFocus] = useState(null)
   const [viewer, setViewer] = useState(null)
   const [aiOpen, setAIOpen] = useState(false)
+  const [agentOpen, setAgentOpen] = useState(false)
+  const [agentPlan, setAgentPlan] = useState(null)
+  const [agentTab, setAgentTab] = useState(null)
   const [aiSource, setAISource] = useState(null)
   const openAI = a => { setAISource(a ? { ...a } : null); setAIOpen(true) }
   const [importOpen, setImportOpen] = useState(false)
@@ -300,14 +304,14 @@ function Workbench() {
   const libraryEmpty = sidebar.counts.all === 0 && sidebar.counts.trash === 0
 
   return (
-    <div className="workbench h-full flex">
+    <div className={`workbench h-full flex ${agentOpen ? 'with-agent' : ''}`}>
       {offline && (
         <div role="alert" className="fixed top-0 inset-x-0 z-[90] flex items-center justify-center gap-3 bg-danger text-white text-[13px] py-2 px-4">
           <CircleAlert size={15} />{OFFLINE}
           <button className="btn btn-sm bg-white/15 border-white/30 text-white hover:bg-white/25" onClick={() => { loadSidebar(); loadPage(0, false) }}>重试</button>
         </div>
       )}
-      <Sidebar sidebar={sidebar} scope={scope} setScope={(s) => { setScope(s) }} reload={() => { loadSidebar(); refresh(true) }} theme={theme} onToggleTheme={() => setTheme((v) => v === 'night' ? 'light' : 'night')}
+      <Sidebar sidebar={sidebar} scope={scope} setScope={(s) => { setScope(s) }} reload={() => { loadSidebar(); refresh(true) }} theme={theme} onToggleTheme={() => setTheme((v) => v === 'night' ? 'light' : 'night')} onAgent={() => { if (scope === 'settings') setScope('all'); setAgentOpen(true) }}
         onDropAssets={async (folderId, dragIds) => {
           try { const r = await api.post('/api/batch', { ids: dragIds, action: 'move', folder_id: folderId }); toast(`已移动 ${r.count} 个素材`); refresh(true) } catch (e) { toast(e.message, 'error') }
         }} />
@@ -326,6 +330,7 @@ function Workbench() {
             </div>
             <button className="btn btn-primary import-button" onClick={() => { setImportFolder(currentFolder); setImportOpen(true) }}><Upload size={15} />导入素材</button>
             <button className="btn" onClick={() => openAI(null)} title="查看 AI 生成任务与结果"><Sparkles size={15} />AI 任务</button>
+            {!agentOpen && <button className="btn" onClick={() => setAgentOpen(true)}><Sparkles size={15}/>AI 助手</button>}
             {!showInspector && <button className="btn btn-icon" onClick={() => setShowInspector(true)} title="展开右栏" aria-label="展开右栏"><PanelRightOpen size={16} /></button>}
           </div>
 
@@ -371,7 +376,8 @@ function Workbench() {
               empty={<EmptyResult scope={scope} hasFilter={hasFilter} clear={clearFilters} />} />
           )}
 
-          {selected.size > 1 && (
+          {agentOpen && agentPlan && <AgentResults plan={agentPlan} onTasks={() => setAgentTab({ tab: 'tasks', id: Date.now() })}/>}
+          {selected.size > 1 && !agentOpen && (
             <BatchBar count={selected.size} trash={scope === 'trash'} onAction={batch} onClear={() => setSelected(new Set())} />
           )}
           {dragOver && (
@@ -383,7 +389,8 @@ function Workbench() {
         </main>
       )}
 
-      {scope !== 'settings' && showInspector && (
+      {scope !== 'settings' && agentOpen && <AgentPanel selectedIds={[...selected]} scope={scope} onClose={() => setAgentOpen(false)} onChanged={() => refresh(false)} onPlan={setAgentPlan} requestedTab={agentTab}/>}
+      {scope !== 'settings' && !agentOpen && showInspector && (
         focus && items.some((i) => i.id === focus)
           ? <Inspector id={focus} version={version} sidebar={sidebar} trash={scope === 'trash'} onChanged={(drop) => refresh(drop)} onOpen={() => setViewer(focusIndex)} onCollapse={() => setShowInspector(false)} />
           : <aside className="asset-inspector shrink-0 bg-panel flex flex-col">
@@ -613,7 +620,7 @@ function BatchBar({ count, trash, onAction, onClear }) {
 
 /* ---------------------------------------------------------------- 左栏 */
 
-function Sidebar({ sidebar, scope, setScope, reload, onDropAssets, theme, onToggleTheme }) {
+function Sidebar({ sidebar, scope, setScope, reload, onDropAssets, theme, onToggleTheme, onAgent }) {
   const c = sidebar.counts
   const ask = useAsk()
   const toast = useToast()
@@ -726,6 +733,7 @@ function Sidebar({ sidebar, scope, setScope, reload, onDropAssets, theme, onTogg
         {(byParent.root || []).map((f) => <Node key={f.id} f={f} depth={0} />)}
       </div>
       <div className="sidebar-footer space-y-0.5">
+        <button className="agent-entry" onClick={onAgent}><Sparkles size={23}/><span><strong>AI 助手</strong><small>智能修图 · 文生图 · 批量处理</small></span><ChevronRight size={16} className="ml-auto"/></button>
         <button className="library-summary" onClick={() => setScope('settings')}><HardDrive size={22} /><span><strong>你的创作素材</strong><small>{c.all.toLocaleString()} 个素材 · {sidebar.folders.length} 个分类</small></span><ChevronRight size={17} /></button>
         <div className="local-status"><CircleCheck size={18} /><span>本地素材库已连接<small>素材保存在本机</small></span><i /></div>
         {sidebar.pending_thumbs > 0 && (

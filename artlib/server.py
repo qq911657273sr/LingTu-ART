@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
-from . import backup, db, library, media, ai_edit
+from . import backup, db, library, media, ai_edit, web_auth, agent_service, agent_store, updates
 from . import config as cfgmod
 from .config import RESOURCE_DIR, Paths
 
@@ -31,10 +31,16 @@ app = FastAPI(title="美术素材库", docs_url=None, redoc_url=None, openapi_ur
 
 
 def open_library(data_dir: Path) -> None:
-    with ai_edit.LOCK:
+    with agent_store.LOCK, ai_edit.LOCK:
         if ai_edit.ACTIVE:
             raise ValueError("AI 任务仍在生成，请等待完成后切换素材库")
+        if library.PATHS and agent_service.busy():
+            raise ValueError('助手任务尚未结束，请先停止任务再切换素材库')
+        if library.PATHS:
+            agent_service.codex.close()
+            agent_service._threads.clear()
         library.start(Paths(data_dir))
+        agent_service.init()
 
 
 @app.exception_handler(ValueError)
@@ -44,7 +50,7 @@ async def _value_error(_req, exc: ValueError):
 
 @app.middleware("http")
 async def _local_only(request: Request, call_next):
-    # 只接受本机访问，并拒绝其它网站在浏览器里跨站调用接口
+    # Keep the application bound to loopback; public deployments sit behind a local TLS proxy.
     host = request.client.host if request.client else ""
     try:
         loopback = ipaddress.ip_address(host).is_loopback
@@ -53,11 +59,25 @@ async def _local_only(request: Request, call_next):
     if not loopback:
         return JSONResponse({"detail": "只允许本机访问"}, status_code=403)
     origin = request.headers.get("origin")
-    if origin and request.method != "GET":
+    if web_auth.ENABLED:
+        if request.headers.get("host", "").split(":", 1)[0].lower() != web_auth.urlsplit(web_auth.PUBLIC_ORIGIN).hostname:
+            return JSONResponse({"detail": "请求域名无效"}, status_code=400)
+        if request.method not in ("GET", "HEAD", "OPTIONS") and origin != web_auth.PUBLIC_ORIGIN:
+            return JSONResponse({"detail": "拒绝跨站请求"}, status_code=403)
+        auth_route = request.url.path in ("/api/auth/status", "/api/auth/login", "/api/auth/logout", "/api/ping")
+        protected = request.url.path.startswith("/api/") or request.url.path.startswith(("/file/", "/thumb/"))
+        if protected and not auth_route and not web_auth.authenticated(request):
+            return JSONResponse({"detail": "登录状态已失效，请重新登录"}, status_code=401,
+                                headers={"Cache-Control": "no-store"})
+    elif origin and request.method != "GET":
         o = origin.split("//", 1)[-1].split(":")[0]
         if o not in ("127.0.0.1", "localhost", "[::1]"):
             return JSONResponse({"detail": "拒绝跨站请求"}, status_code=403)
-    return await call_next(request)
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    return response
 
 
 def _asset_or_404(asset_id: str) -> dict:
@@ -350,7 +370,10 @@ def api_switch(data: dict = Body(...)):
 
 # ---------------------------------------------------------------- 前端
 
+app.include_router(web_auth.router)
 app.include_router(ai_edit.router)
+app.include_router(agent_service.router)
+app.include_router(updates.router)
 
 if WEB_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=WEB_DIR / "assets"), name="static")

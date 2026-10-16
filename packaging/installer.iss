@@ -1,7 +1,14 @@
-#define AppVersion "1.3.11"
+#define AppVersion ReadIni(SourcePath + "..\version.ini", "app", "version", "")
+#if AppVersion == ""
+  #error Missing app version in version.ini
+#endif
 
 [Setup]
+#ifdef TestInstall
+AppId={{948E012B-0809-42B3-88C8-B1D36E755B6D}
+#else
 AppId={{948E012B-0809-42B3-88C8-B1D36E755B6C}
+#endif
 AppName=灵图 ART · 美术素材库
 AppVersion={#AppVersion}
 AppPublisher=灵图 ART
@@ -13,13 +20,21 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 OutputDir=..\output\installer
+#ifdef TestInstall
+OutputBaseFilename=LingTu-ART-TestSetup-{#AppVersion}
+#else
 OutputBaseFilename=LingTu-ART-Setup-{#AppVersion}
+#endif
 SetupIconFile=artspace.ico
 UninstallDisplayIcon={app}\ARTSPACE.exe
 Compression=lzma2/fast
 SolidCompression=yes
 WizardStyle=modern
+#ifdef TestInstall
+AppMutex=ARTSPACE-Agent-Installer-Test
+#else
 AppMutex=ARTSPACE-Desktop-Application
+#endif
 CloseApplications=yes
 RestartApplications=no
 
@@ -36,6 +51,7 @@ Source: "artspace.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "MicrosoftEdgeWebview2Setup.exe"; Flags: dontcopy
 Source: "桌面版使用说明.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "AI图生图使用说明.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Agent助手使用说明.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autodesktop}\灵图 ART"; Filename: "{app}\ARTSPACE.exe"; IconFilename: "{app}\artspace.ico"; Tasks: desktopicon; WorkingDir: "{app}"
@@ -84,6 +100,7 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   UserDir: String;
 begin
+#ifndef TestInstall
   if CurStep = ssInstall then begin
     DeleteFile(ExpandConstant('{autodesktop}\Artspace Studio.lnk'));
     DeleteFile(ExpandConstant('{autoprograms}\Artspace Studio\Artspace Studio.lnk'));
@@ -97,6 +114,7 @@ begin
     if not FileExists(UserDir + '\config.json') then
       SaveStringToFile(UserDir + '\source-library.txt', UTF8Encode(LegacyConfig), False);
   end;
+#endif
 end;
 
 

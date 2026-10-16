@@ -12,6 +12,7 @@ async function req(method, url, body) {
     throw new Error(OFFLINE)
   }
   const data = res.headers.get('content-type')?.includes('json') ? await res.json() : await res.text()
+  if (res.status === 401 && !url.startsWith('/api/auth/')) window.dispatchEvent(new Event('lingtu-auth-required'))
   if (!res.ok) throw new Error(data?.detail || data || `请求失败（${res.status}）`)
   return data
 }
@@ -34,6 +35,7 @@ export function uploadFile(file, folderId, onProgress) {
     xhr.open('POST', `/api/import?${q}`)
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total)
     xhr.onload = () => {
+      if (xhr.status === 401) window.dispatchEvent(new Event('lingtu-auth-required'))
       try {
         const d = JSON.parse(xhr.responseText)
         resolve(xhr.status < 300 ? d : { status: 'failed', message: d.detail || `服务器错误 ${xhr.status}` })

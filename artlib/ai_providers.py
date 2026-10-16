@@ -91,6 +91,18 @@ def generate(config, key, prompt, images, update):
     urls = ['data:image/png;base64,' + base64.b64encode(i).decode() for i in images]
     update(stage='正在发送参考图与提示词')
     if kind == 'openai':
+        if not images:
+            fields = {'model': model, 'prompt': prompt, 'n': 1}
+            if config.get('size'):
+                fields['size'] = config['size']
+            result = json_request(base + '/images/generations', fields, headers)
+            item = (result.get('data') or [{}])[0]
+            value = item.get('b64_json') or item.get('url')
+            if not value:
+                raise ValueError('服务未返回图片')
+            update(stage='正在下载并校验结果')
+            update(download_value=value)
+            return read_image(value)
         fields = {'model': model, 'prompt': prompt, 'n': '1'}
         if config.get('size'):
             fields['size'] = config['size']
@@ -134,6 +146,7 @@ def generate(config, key, prompt, images, update):
     if not value:
         raise ValueError('服务未返回图片，请确认所选模型支持图像编辑与图片输出')
     update(stage='正在下载并校验结果')
+    update(download_value=value)
     return read_image(value)
 
 
@@ -167,13 +180,32 @@ def runninghub(config, key, prompt, images, update):
         if not task_id:
             raise ValueError('RunningHub 提交失败：' + error_message(result.get('errorMessage') or result.get('message') or '未返回任务 ID', key))
         update(remote_id=str(task_id), stage='RunningHub 排队 / 生成中')
+        return runninghub_result(config, key, task_id, update, result)
+    payload = {'apiKey': key, 'webappId' if app_mode else 'workflowId': config['workflow_id'], 'nodeInfoList': nodes}
+    payload['instanceType'] = config.get('instance_type', 'default')
+    result = json_request(base + ('/task/openapi/ai-app/run' if app_mode else '/task/openapi/create'), payload, headers)
+    task_id = (result.get('data') or {}).get('taskId')
+    if result.get('code') != 0 or not task_id:
+        raise ValueError('RunningHub 提交失败：' + error_message(result.get('msg', '未返回任务 ID'), key))
+    update(remote_id=str(task_id), stage='RunningHub 排队 / 生成中')
+    return runninghub_result(config, key, task_id, update)
+
+
+def runninghub_result(config, key, task_id, update, result=None):
+    """Poll an existing remote task. Never upload or submit on recovery."""
+    base = config['base_url'].rstrip('/')
+    headers = {'Authorization': f'Bearer {key}'}
+    if config.get('rh_version') == 'v2':
         for _ in range(240):
+            if result is None:
+                result = json_request(base + '/openapi/v2/query', {'taskId': task_id}, headers)
             status = result.get('status')
             if status == 'SUCCESS':
                 candidates = [o for o in (result.get('results') or []) if o.get('outputType', '').lower() in ('png', 'jpg', 'jpeg', 'webp', 'image') and o.get('url')]
                 if not candidates:
                     raise ValueError('RunningHub 工作流未输出图片')
                 update(stage='正在下载并校验结果')
+                update(download_value=candidates[0]['url'])
                 return read_image(candidates[0]['url'])
             if status == 'FAILED' or result.get('errorCode'):
                 raise ValueError('RunningHub 任务失败：' + error_message(result.get('errorMessage') or '请查看平台任务记录', key))
@@ -182,13 +214,6 @@ def runninghub(config, key, prompt, images, update):
             time.sleep(5)
             result = json_request(base + '/openapi/v2/query', {'taskId': task_id}, headers)
         raise ValueError('RunningHub 等待超过 20 分钟；任务 ID 已保留，请到平台查看，勿重复提交')
-    payload = {'apiKey': key, 'webappId' if app_mode else 'workflowId': config['workflow_id'], 'nodeInfoList': nodes}
-    payload['instanceType'] = config.get('instance_type', 'default')
-    result = json_request(base + ('/task/openapi/ai-app/run' if app_mode else '/task/openapi/create'), payload, headers)
-    task_id = (result.get('data') or {}).get('taskId')
-    if result.get('code') != 0 or not task_id:
-        raise ValueError('RunningHub 提交失败：' + error_message(result.get('msg', '未返回任务 ID'), key))
-    update(remote_id=str(task_id), stage='RunningHub 排队 / 生成中')
     for _ in range(240):
         time.sleep(5)
         result = json_request(base + '/task/openapi/outputs', {'apiKey': key, 'taskId': task_id}, headers)
@@ -205,5 +230,6 @@ def runninghub(config, key, prompt, images, update):
         if not candidates:
             raise ValueError('RunningHub 工作流未输出图片，请检查输出节点')
         update(stage='正在下载并校验结果')
+        update(download_value=candidates[0]['fileUrl'])
         return read_image(candidates[0]['fileUrl'])
     raise ValueError('RunningHub 等待超过 20 分钟；任务 ID 已保留，请到平台查看，勿直接重复提交')

@@ -21,7 +21,7 @@ import zipfile
 from pathlib import Path
 
 from . import config as cfgmod
-from . import db, ai_edit
+from . import db, ai_edit, agent_store
 from .library import FILE_LOCK, sha256_file
 
 
@@ -31,7 +31,8 @@ def create_backup(data_dir: Path, backup_dir: Path, progress=lambda done, total:
     target = backup_dir / f"素材库备份-{stamp}.zip"
     part = target.with_suffix(".zip.part")
     snap = backup_dir / f".snapshot-{stamp}.db"
-    with ai_edit.LOCK, FILE_LOCK:
+    agent_snap = backup_dir / f'.agent-snapshot-{stamp}.db'
+    with agent_store.LOCK, ai_edit.LOCK, FILE_LOCK:
         src = db.open_db(data_dir / "library.db")
         dst = sqlite3.connect(snap)
         try:
@@ -61,10 +62,26 @@ def create_backup(data_dir: Path, backup_dir: Path, progress=lambda done, total:
                         rel = f.relative_to(data_dir).as_posix()
                         z.write(f, rel)
                         manifest['files'].append({'path': rel, 'sha256': sha256_file(f)})
+                agent_db = data_dir / 'agent' / 'agent.db'
+                if agent_db.exists():
+                    source = sqlite3.connect(agent_db)
+                    destination = sqlite3.connect(agent_snap)
+                    try:
+                        source.backup(destination)
+                    finally:
+                        source.close(); destination.close()
+                    z.write(agent_snap, 'agent/agent.db')
+                    manifest['files'].append({'path': 'agent/agent.db', 'sha256': sha256_file(agent_snap)})
+                for f in sorted((data_dir / 'agent' / 'workspace' / '.agents' / 'skills').rglob('*')):
+                    if f.is_file():
+                        rel = f.relative_to(data_dir).as_posix()
+                        z.write(f, rel)
+                        manifest['files'].append({'path': rel, 'sha256': sha256_file(f)})
                 z.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=1))
             part.replace(target)
         finally:
             snap.unlink(missing_ok=True)
+            agent_snap.unlink(missing_ok=True)
             part.unlink(missing_ok=True)
     return {"path": str(target), "files": len(manifest["files"]), "missing": manifest.get("missing", []),
             "bytes": target.stat().st_size}
@@ -93,8 +110,9 @@ def restore_backup(zip_path: Path, target_dir: Path, progress=lambda done, total
             rel = entry["path"]
             dest = (root / rel).resolve()
             original = rel.startswith('originals/') and dest.is_relative_to(root / 'originals')
-            ai_file = bool(re.fullmatch(r'ai-edit/(settings\.json|references/[a-f0-9]{32}\.png|jobs/[a-f0-9]{32}/(job\.json|result\.png|input-[0-7]\.png))', rel)) and dest.is_relative_to(root / 'ai-edit')
-            if not original and not ai_file:
+            ai_file = bool(re.fullmatch(r'ai-edit/(settings\.json|references/[a-f0-9]{32}\.png|jobs/[a-f0-9]{32}/(job\.json|provider-result\.json|result\.png|input-[0-7]\.png))', rel)) and dest.is_relative_to(root / 'ai-edit')
+            agent_file = (rel == 'agent/agent.db' or bool(re.fullmatch(r'agent/workspace/\.agents/skills/[a-z0-9-]+/.+', rel))) and dest.is_relative_to(root / 'agent') and '..' not in Path(rel).parts and ':' not in rel and '\\' not in rel
+            if not original and not ai_file and not agent_file:
                 raise ValueError(f"备份中包含非法路径：{rel}")
             dest.parent.mkdir(parents=True, exist_ok=True)
             with z.open(rel) as fin, open(dest, "wb") as fout:

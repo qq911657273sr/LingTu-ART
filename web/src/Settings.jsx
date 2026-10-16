@@ -3,6 +3,7 @@ import { FolderOpen, HardDriveDownload, RotateCcw, ImageUp, CircleCheck, CircleA
 import { api, copyText, fmtSize, fmtTime } from './api'
 import { useAsk, useToast } from './ui'
 import { AISettings } from './AISettings'
+import { UpdateCard } from './UpdateCard'
 
 export function Settings({ onLibraryChanged }) {
   const [s, setS] = useState(null)
@@ -56,6 +57,7 @@ export function Settings({ onLibraryChanged }) {
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-5 anim-rise">
       <div><h1 className="text-[22px] font-semibold tracking-tight">设置与备份</h1><p className="text-dim text-xs mt-1">存储位置、完整备份、视频支持与缩略图</p></div>
 
+      <UpdateCard />
       <Card title="AI 图生图"><AISettings /></Card>
 
       <Card title="存储位置">
