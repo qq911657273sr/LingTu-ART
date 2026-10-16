@@ -70,7 +70,7 @@ try:
     asset_ids = []
     for sample in (image, video):
         result = request("POST", "/api/import?" + urlencode({"name": sample.name}), raw=sample.read_bytes())
-        check(result['status'] == 'ok', f"import {sample.suffix}")
+        check(result['status'] == 'ok', f"import {sample.suffix}: {result}")
         asset_ids.append(result['asset_id'])
     for _ in range(60):
         if request("GET", "/api/sidebar")["pending_thumbs"] == 0:

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_submodules
 from artlib.vendor.feral.tools import find_binary
@@ -8,7 +9,15 @@ for name in ("ffmpeg", "ffprobe"):
     path = find_binary(name)
     if not path:
         raise RuntimeError(f"Missing {name}")
-    tools.append((path, "bin"))
+    binary = Path(path).resolve()
+    chocolatey = Path(os.environ.get("ChocolateyInstall", r"C:\ProgramData\chocolatey"))
+    if binary.parent == chocolatey / "bin":
+        candidates = sorted((chocolatey / "lib" / "ffmpeg" / "tools").glob(f"**/{name}.exe"))
+        candidates = [p for p in candidates if p.stat().st_size > 100_000]
+        if len(candidates) != 1:
+            raise RuntimeError(f"Cannot resolve real Chocolatey {name} binary: {candidates}")
+        binary = candidates[0]
+    tools.append((str(binary), "bin"))
 a = Analysis([str(root / "native_entry.py")], pathex=[str(root)], binaries=tools,
     datas=[(str(root / 'version.ini'), '.'), (str(root / "web" / "dist"), "web/dist"), (str(root / "packaging" / "artspace.ico"), "."),
            (str(root / "THIRD_PARTY_NOTICES.md"), "."), (str(root / "packaging" / "FFmpeg-LICENSE.txt"), "licenses"),
