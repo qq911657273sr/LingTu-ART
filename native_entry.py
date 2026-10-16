@@ -60,6 +60,9 @@ def configure():
         sys.stdout = open(user_dir / "desktop.log", "a", encoding="utf-8", buffering=1)
     if sys.stderr is None:
         sys.stderr = sys.stdout
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
     logging.basicConfig(filename=user_dir / "desktop.log", level=logging.INFO, encoding="utf-8")
     return user_dir
 
