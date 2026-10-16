@@ -14,7 +14,7 @@ export function UpdateCard() {
   }
   return <section className="rounded-2xl border border-border bg-panel/70 p-5 space-y-3.5" aria-label="软件更新">
     <div className="flex items-center gap-3 flex-wrap"><div className="flex-1"><h2 className="font-semibold text-[14px]">软件更新</h2><p className="text-dim text-xs mt-1">灵图 ART {info ? `v${info.current_version}` : '读取版本中…'} · GitHub 正式版</p></div>
-      <button className="btn btn-primary" disabled={busy || !info} onClick={check}>{busy ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>} {busy ? '正在检查…' : '检查更新'}</button>
+      <button className="btn bg-accent text-[#202126] border-transparent hover:bg-accent-2" disabled={busy || !info} onClick={check}>{busy ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>} {busy ? '正在检查…' : '检查更新'}</button>
       {info && <a className="btn" href={info.releases_url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14}/>GitHub 发布页</a>}
     </div>
     {error && <p role="alert" className="text-danger text-xs flex gap-2"><CircleAlert size={14} className="shrink-0"/>{error}</p>}
