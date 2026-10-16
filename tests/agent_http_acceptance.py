@@ -24,7 +24,7 @@ config.write_text(json.dumps({'host': '127.0.0.1', 'port': PORT, 'data_dir': str
 log = open(WORK / 'server.log', 'w', encoding='utf-8')
 server_command = [str(Path(sys.argv[1]).resolve()), '--no-browser'] if len(sys.argv) > 1 else [sys.executable, '-m', 'artlib', '--no-browser']
 process = subprocess.Popen(server_command, cwd=ROOT,
-    env={**os.environ, 'ARTLIB_CONFIG': str(config), 'LOCALAPPDATA': str(WORK), 'PYTHONIOENCODING': 'cp1252'}, stdout=log, stderr=log,
+    env={**os.environ, 'ARTLIB_CONFIG': str(config), 'LOCALAPPDATA': str(WORK), 'PYTHONIOENCODING': 'cp1252' if len(sys.argv) > 1 else 'utf-8'}, stdout=log, stderr=log,
     creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
 mcp = None
 checks = 0
