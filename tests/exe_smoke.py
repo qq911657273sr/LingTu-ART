@@ -33,7 +33,7 @@ def request(method, path, body=None, raw=None):
 cfg = {"host": "127.0.0.1", "port": PORT, "data_dir": "数据", "backup_dir": "备份", "export_dir": str(WORK / "导出"), "open_browser": False}
 config = WORK / "config.json"
 config.write_text(json.dumps(cfg, ensure_ascii=False), encoding="utf-8")
-env = {**os.environ, "ARTLIB_CONFIG": str(config), "PATH": str(Path(os.environ["SystemRoot"]) / "System32")}
+env = {**os.environ, "ARTLIB_CONFIG": str(config), "LOCALAPPDATA": str(WORK), "PATH": str(Path(os.environ["SystemRoot"]) / "System32")}
 log = open(WORK / "exe.log", "w", encoding="utf-8")
 process = subprocess.Popen([str(EXE), "--no-browser"], cwd=WORK, env=env, stdout=log, stderr=log,
                            creationflags=subprocess.CREATE_NO_WINDOW)
@@ -47,6 +47,8 @@ try:
         except OSError:
             time.sleep(.5)
     else:
+        for diagnostic in (WORK / 'exe.log', WORK / 'ARTSPACE' / 'desktop.log'):
+            if diagnostic.exists(): print(diagnostic.read_text('utf-8', errors='replace')[-12000:], flush=True)
         raise RuntimeError("Frozen service did not become ready")
     check((WORK / "数据" / "library.db").is_file(), "database persists outside one-file extraction directory")
     check(request('GET', '/api/update')['current_version'] == '1.4.1', 'bundled shared version and update endpoint available')

@@ -24,7 +24,7 @@ config.write_text(json.dumps({'host': '127.0.0.1', 'port': PORT, 'data_dir': str
 log = open(WORK / 'server.log', 'w', encoding='utf-8')
 server_command = [str(Path(sys.argv[1]).resolve()), '--no-browser'] if len(sys.argv) > 1 else [sys.executable, '-m', 'artlib', '--no-browser']
 process = subprocess.Popen(server_command, cwd=ROOT,
-    env={**os.environ, 'ARTLIB_CONFIG': str(config)}, stdout=log, stderr=log,
+    env={**os.environ, 'ARTLIB_CONFIG': str(config), 'LOCALAPPDATA': str(WORK)}, stdout=log, stderr=log,
     creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
 mcp = None
 checks = 0
@@ -55,11 +55,14 @@ def rpc(method, params=None):
 
 
 try:
-    for _ in range(60):
+    for _ in range(180):
         try:
             if http('GET', '/api/ping')[0] == 200: break
-        except OSError: time.sleep(.1)
-    else: raise RuntimeError('HTTP server failed: ' + str(WORK))
+        except OSError: time.sleep(.5)
+    else:
+        for diagnostic in (WORK / 'server.log', WORK / 'ARTSPACE' / 'desktop.log'):
+            if diagnostic.exists(): print(diagnostic.read_text('utf-8', errors='replace')[-12000:], flush=True)
+        raise RuntimeError('HTTP server failed: ' + str(WORK))
     check(http('GET', '/api/agent/status')[0] == 200, 'agent status available without starting inference')
     check(http('GET', '/api/update')[1]['current_version'] == '1.4.1', 'shared application version available in source and frozen build')
     check(http('POST', '/api/agent/context', {}, headers={'Origin': 'https://unrelated.example'})[0] == 403, 'cross-site Agent requests rejected')

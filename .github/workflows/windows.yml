@@ -77,9 +77,12 @@ jobs:
         run: .\packaging\build-windows.ps1
       - name: Verify frozen Agent and MCP
         if: steps.version.outputs.publish == 'true'
+        timeout-minutes: 5
         run: |
           .venv\Scripts\python.exe tests/agent_http_acceptance.py build/ARTSPACE/ARTSPACE.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Frozen Agent check failed' }
           .venv\Scripts\python.exe tests/exe_smoke.py build/ARTSPACE/ARTSPACE.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Frozen application check failed' }
       - name: Generate installer checksum
         if: steps.version.outputs.publish == 'true'
         shell: pwsh
