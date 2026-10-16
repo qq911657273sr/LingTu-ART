@@ -30,11 +30,11 @@ mcp = None
 checks = 0
 
 
-def http(method, path, data=None, raw=None, headers=None):
+def http(method, path, data=None, raw=None, headers=None, timeout=20):
     req = Request(BASE + path, data=raw if raw is not None else json.dumps(data).encode() if data is not None else None,
                   method=method, headers={**({'Content-Type': 'application/json'} if data is not None else {}), **(headers or {})})
     try:
-        with urlopen(req, timeout=20) as response:
+        with urlopen(req, timeout=timeout) as response:
             body = response.read()
             return response.status, json.loads(body) if 'json' in response.headers.get('Content-Type', '') else body
     except HTTPError as exc:
@@ -57,7 +57,7 @@ def rpc(method, params=None):
 try:
     for _ in range(180):
         try:
-            if http('GET', '/api/ping')[0] == 200: break
+            if http('GET', '/api/ping', timeout=.3)[0] == 200: break
         except OSError: time.sleep(.5)
     else:
         for diagnostic in (WORK / 'server.log', WORK / 'ARTSPACE' / 'desktop.log'):

@@ -155,7 +155,10 @@ if __name__ == "__main__":
         main()
     except Exception as error:
         logging.exception("ARTSPACE startup failed")
-        if "--desktop-smoke" in sys.argv:
+        if "--no-browser" in sys.argv:
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+        elif "--desktop-smoke" in sys.argv:
             report = Path(sys.argv[sys.argv.index("--desktop-smoke") + 1])
             report.write_text(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False), "utf-8")
         else:
